@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Weight Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="container"></div>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        camera.position.z = 10;
+
+        const spheres = [];
+        const colors = [0xff0000, 0x00ff00, 0x0000ff];
+
+        function createSphere(weight, color) {
+            const size = Math.max(0.1, Math.abs(weight)); // Limit the size of the spheres
+            const geometry = new THREE.SphereGeometry(size, 32, 32);
+            const material = new THREE.MeshBasicMaterial({ color });
+            const sphere = new THREE.Mesh(geometry, material);
+            return sphere;
+        }
+
+        function updateSpheres(weights) {
+            // Remove existing spheres from the scene
+            while (spheres.length > 0) {
+                const sphere = spheres.pop();
+                scene.remove(sphere);
+            }
+
+            const spacing = 2;
+
+            // Add new spheres based on updated weights
+            weights.forEach((layerWeights, i) => {
+                layerWeights.forEach((neuronWeights, j) => {
+                    neuronWeights.forEach((weight, k) => {
+                        const sphere = createSphere(weight, colors[k % colors.length]);
+                        sphere.position.set(j * spacing, k * spacing, -i * spacing); // Add spacing between spheres
+                        spheres.push(sphere);
+                        scene.add(sphere);
+                    });
+                });
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        async function fetchWeights() {
+            const response = await fetch('/weights');
+            const data = await response.json();
+            return data;
+        }
+
+        async function visualizeWeights() {
+            const weights = await fetchWeights();
+            updateSpheres(weights);
+        }
+
+        visualizeWeights();
+        setInterval(visualizeWeights, 1000); // Update every second
+    </script>
+</body>
+</html>
